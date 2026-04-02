@@ -135,8 +135,3 @@ npm start
 	Stop the existing process or run on a different port via `PORT`.
 - If camera scan is unavailable, ensure browser permissions allow camera access.
 
-## Team
-
-- Selma Mary Paul - UI/UX
-- Merin Elizabeth Edgar - HTML/CSS/JavaScript
-- Thanushree Suresh - HTML/CSS/JavaScript
