@@ -1,92 +1,142 @@
-# FOOD EXPIRATION TRACKER 🎯
+# Food Expiration Tracker
 
+Food Expiration Tracker is a full-stack web application for managing perishable inventory.
+It helps teams scan products, track expiry status, process donation/return/recycle actions, and export inventory reports.
 
-## Basic Details
-### Team Name: Hackfinity
+## What It Solves
 
+Supermarkets and food vendors often lose track of expiry timelines, resulting in waste and missed donation opportunities.
+This app creates a single workflow to:
 
-### Team Members
-- Member 1: Merin Elizabeth Edgar - SCET
-- Member 2: Thanushree Suresh - SCET
-- Member 3: Selma Mary Paul - SCET
+- Capture products via QR scan or manual entry
+- Automatically group inventory by freshness
+- Process bulk actions on selected products
+- Keep persistent data between sessions
+- Export a CSV report for audits and operations
 
-### Hosted Project Link
-https://selmamarypaul.github.io/hackfinity/
+## Features
 
-### Project Description
-The Food Expiration Tracker is a web-based application designed for supermarkets to track food expiration dates, alert staff about expiring products, and facilitate food donations to nearby food banks. By using a QR code scanner, the system can quickly identify products and their expiration dates, helping reduce food waste and assist lower-income families
+- Multi-page UI: Dashboard, Inventory, Reports
+- QR-based product capture (camera)
+- Manual product entry form
+- Auto-classification: `fresh`, `expiring-soon`, `expired`
+- Bulk actions: donate, return, recycle
+- Reward points for recycling actions
+- Activity timeline for operational tracking
+- CSV export for reporting
+- Backend persistence using JSON storage
 
+## Tech Stack
 
-### The Problem statement
-Supermarkets face challenges in tracking food expiration, leading to waste and missed donation opportunities, which the Food Expiration Tracker solves by automating expiration alerts and connecting surplus food with nearby food banks.
+Frontend:
 
-### The Solution
-✨ Reduces Food Waste – Helps supermarkets efficiently manage perishable food.
-✨ Supports Local Communities – Connects surplus food with food banks serving low-income families.
-✨ Enhances Efficiency – Automates tracking, reducing manual work for supermarket staff.
-✨ Encourages Sustainability – Promotes responsible food consumption and donation practices.
+- HTML5
+- CSS3
+- JavaScript (ES6+)
+- html5-qrcode
 
+Backend:
 
-## Technical Details
-### Technologies/Components Used
-For Software:
--  HTML5
--   CSS3
--   JavaScript (ES6+)
-- HTML5-QRCode
-- Development Tools
-- Version Control
-- Testing Tools
- - Design Tools
-   
+- Node.js
+- Express
+- File-based JSON datastore (`data/products.json`)
 
-For Hardware:
--Computer camera /webcam(for QR code scanning)
-### Implementation 
-# Installation
--git clone [your repo link]
+## Project Structure
 
--cd hackfinity
+```text
+hackfinity/
+|- data/
+|  |- products.json
+|- index.html
+|- inventory.html
+|- reports.html
+|- script.js
+|- styles.css
+|- server.js
+|- package.json
+```
 
--npm install
+## Getting Started
 
-# Run
-npm run dev
+### 1. Clone and install
 
-### Project Documentation
-For Software:
+```bash
+git clone <your-repo-url>
+cd hackfinity
+npm install
+```
 
-# Screenshots (Add at least 3)
-![image](https://github.com/user-attachments/assets/6a8bf0da-035c-49e7-821e-4140e568a23f)
-"Track. Save. Donate. Reduce Food Waste Today!"
-![image](https://github.com/user-attachments/assets/49256db6-44b3-4518-9327-ac2d8de8d3f0)
-"Scan, Save, Share—Because Food Deserves a Second Chance."
+### 2. Run
 
+```bash
+npm start
+```
 
+Server runs at:
 
+```text
+http://localhost:3000
+```
 
+## Pages
 
+- `/` - Dashboard
+- `/inventory` - Inventory management
+- `/reports` - Reports and export
 
+## API Endpoints
 
+- `GET /api/products` - List products with summary
+- `GET /api/summary` - Summary metrics and recent activity
+- `POST /api/products` - Add product (manual or QR source)
+- `POST /api/actions` - Run bulk action (`donate`, `return`, `recycle`)
+- `DELETE /api/products/:id` - Remove one product
+- `GET /api/reports/overview` - Reporting payload
+- `GET /api/reports/export.csv` - Download CSV export
 
-![image](https://github.com/user-attachments/assets/874cd2f9-4b94-42ef-b63c-eff1a5cc0631)
+## QR Data Format
 
-"Don’t Waste, Donate—Every Meal Matters!"
+QR data supports either JSON or line-based text.
 
+JSON example:
 
-# Build Photos
-![WhatsApp Image 2025-02-02 at 10 49 56_da467ea7](https://github.com/user-attachments/assets/9db26b3b-434e-42c5-806e-1e25c6458cc0)
+```json
+{
+	"productName": "Fresh Milk",
+	"batchNumber": "B-2048",
+	"manufacturingDate": "2026-04-01",
+	"expiryDate": "2026-04-10"
+}
+```
 
+Text example:
 
+```text
+Product Name: Fresh Milk
+Manufacturing Date: 2026-04-01
+Expiry Date: 2026-04-10
+Batch Number: B-2048
+```
 
+## Configuration
 
-### Project Demo
-## Team Contributions
--SELMA MARY PAUL: UI/UX DESIGN
+- `PORT` (optional): backend port, default is `3000`
 
--MERIN ELIZABETH EDGAR:HTML,CSS,JAVASCRIPT
+Example:
 
--THANUSHREE SURESH: HTML,CSS,JAVASCRIPT
+```bash
+set PORT=4000
+npm start
+```
 
----
-Made with ❤ at TinkerHub
+## Troubleshooting
+
+- If you see `EADDRINUSE`, port `3000` is already in use.
+	Stop the existing process or run on a different port via `PORT`.
+- If camera scan is unavailable, ensure browser permissions allow camera access.
+
+## Team
+
+- Selma Mary Paul - UI/UX
+- Merin Elizabeth Edgar - HTML/CSS/JavaScript
+- Thanushree Suresh - HTML/CSS/JavaScript

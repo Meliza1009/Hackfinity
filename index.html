@@ -3,87 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Food Expiry Tracker</title>
+    <title>Food Expiry Tracker | Dashboard</title>
     <link rel="stylesheet" href="styles.css">
-    <!-- Add QR Code Scanner library -->
     <script src="https://unpkg.com/html5-qrcode"></script>
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1 class="main-title">Food Expiry Tracker</h1>
-            <p class="subtitle">Help achieve Zero Hunger by managing food waste effectively</p>
-            <div class="reward-points">
-                Reward Points: <span id="rewardPoints">0</span>
-            </div>
-        </div>
+<body data-page="dashboard">
+    <div class="page-shell">
+        <main class="container app-layout">
+            <header class="topbar">
+                <div>
+                    <span class="eyebrow">Food Waste Management Dashboard</span>
+                    <h1 class="main-title">Food Expiry Tracker</h1>
+                    <p class="subtitle">Track stock, catch expiry risks early, and route safe food toward donation before it goes to waste.</p>
+                </div>
+                <nav class="page-nav">
+                    <a class="nav-link active" href="index.html">Dashboard</a>
+                    <a class="nav-link" href="inventory.html">Inventory</a>
+                    <a class="nav-link" href="reports.html">Reports</a>
+                </nav>
+            </header>
 
-        <!-- QR Code Scanner -->
-        <div class="scanner-container">
-            <h2>SCAN PRODUCT QR CODE</h2>
-            <div id="qr-reader"></div>
-            <div id="scan-result"></div>
-        </div>
+            <section class="hero-metrics" aria-label="Project overview metrics">
+                <article class="metric-card metric-total">
+                    <span class="metric-label">Total Items</span>
+                    <strong id="totalProducts">0</strong>
+                </article>
+                <article class="metric-card metric-fresh">
+                    <span class="metric-label">Fresh</span>
+                    <strong id="freshCount">0</strong>
+                </article>
+                <article class="metric-card metric-warning">
+                    <span class="metric-label">Expiring Soon</span>
+                    <strong id="expiringSoonCount">0</strong>
+                </article>
+                <article class="metric-card metric-danger">
+                    <span class="metric-label">Expired</span>
+                    <strong id="expiredCount">0</strong>
+                </article>
+            </section>
 
-        <!-- Product Entry Form (Manual Entry Option) -->
-        <div class="form-container">
-            <h2>Manual Product Entry</h2>
-            <form id="product-form">
-                <div class="form-group">
-                    <label for="productName">Product Name:</label>
-                    <input type="text" id="productName" required>
+            <section class="content-grid">
+                <div class="panel scanner-container">
+                    <div class="section-heading">
+                        <p class="section-kicker">Step 1</p>
+                        <h2>Scan Product QR Code</h2>
+                    </div>
+                    <p class="section-copy">Capture product details from a QR code to add items quickly and consistently.</p>
+                    <div id="qr-reader"></div>
+                    <div id="scan-result"></div>
                 </div>
 
-                <div class="form-group">
-                    <label for="productNumber">Batch Number:</label>
-                    <input type="text" id="productNumber" required>
+                <div class="panel action-panel">
+                    <div class="section-heading">
+                        <p class="section-kicker">Overview</p>
+                        <h2>Live Status</h2>
+                    </div>
+                    <p class="section-copy">Monitor inventory movement, reward points, and current workflow state from one place.</p>
+                    <div class="status-stack">
+                        <div class="status-tile">
+                            <span>Reward Points</span>
+                            <strong id="rewardPoints">0</strong>
+                        </div>
+                        <div class="status-tile">
+                            <span>Selected Food Bank</span>
+                            <strong id="selectedFoodBankLabel">None</strong>
+                        </div>
+                        <div class="quick-links">
+                            <a href="inventory.html" class="action-btn donate-btn">Open Inventory</a>
+                            <a href="reports.html" class="action-btn recycle-btn">View Reports</a>
+                        </div>
+                    </div>
                 </div>
+            </section>
 
-                <div class="form-group">
-                    <label for="mfgDate">Manufacture Date:</label>
-                    <input type="date" id="mfgDate" required>
+            <section class="panel actions-panel">
+                <div class="section-heading">
+                    <p class="section-kicker">Step 2</p>
+                    <h2>Take Action</h2>
                 </div>
-
-                <div class="form-group">
-                    <label for="expDate">Expiry Date:</label>
-                    <input type="date" id="expDate" required>
+                <p class="section-copy">Select items from the inventory page, choose a destination, and process the action in one place.</p>
+                <div class="action-buttons">
+                    <select id="foodBankSelect" class="food-bank-select">
+                        <option value="">Select Food Bank</option>
+                        <option value="1">Community Food Bank</option>
+                        <option value="2">Hope Food Center</option>
+                        <option value="3">Local Food Pantry</option>
+                    </select>
+                    <button id="donate-btn" class="action-btn donate-btn">Donate Selected Items</button>
+                    <button id="return-btn" class="action-btn return-btn">Return Selected Items</button>
+                    <button id="recycle-btn" class="action-btn recycle-btn">Recycle Selected Items</button>
                 </div>
-
-                <button type="submit" id="save-btn">Save Product</button>
-            </form>
-        </div>
-
-        <!-- Products List -->
-        <div class="products-container">
-            <h2>Product List</h2>
-            <div class="product-categories">
-                <div id="fresh-products">
-                    <h3>Fresh Products</h3>
-                    <ul class="product-list"></ul>
-                </div>
-                <div id="expiring-soon">
-                    <h3>Expiring Soon</h3>
-                    <ul class="product-list"></ul>
-                </div>
-                <div id="expired">
-                    <h3>Expired Products</h3>
-                    <ul class="product-list"></ul>
-                </div>
-            </div>
-        </div>
-
-        <!-- Action Buttons -->
-        <div class="action-buttons">
-            <select id="foodBankSelect" class="food-bank-select">
-                <option value="">Select Food Bank</option>
-                <option value="1">Community Food Bank</option>
-                <option value="2">Hope Food Center</option>
-                <option value="3">Local Food Pantry</option>
-            </select>
-            <button id="donate-btn" class="action-btn">Donate Selected Items</button>
-            <button id="return-btn" class="action-btn">Return Selected Items</button>
-            <button id="recycle-btn" class="action-btn">Recycle Selected Items</button>
-        </div>
+            </section>
+        </main>
     </div>
 
     <script src="script.js"></script>

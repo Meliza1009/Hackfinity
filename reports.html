@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food Expiry Tracker | Reports</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="reports">
+    <div class="page-shell">
+        <main class="container app-layout">
+            <header class="topbar">
+                <div>
+                    <span class="eyebrow">Reporting Hub</span>
+                    <h1 class="main-title">Export Inventory Reports</h1>
+                    <p class="subtitle">Review summary numbers, inspect recent activity, and export the full inventory as CSV.</p>
+                </div>
+                <nav class="page-nav">
+                    <a class="nav-link" href="index.html">Dashboard</a>
+                    <a class="nav-link" href="inventory.html">Inventory</a>
+                    <a class="nav-link active" href="reports.html">Reports</a>
+                </nav>
+            </header>
+
+            <section class="hero-metrics report-stats" aria-label="Reporting summary metrics">
+                <article class="metric-card metric-total">
+                    <span class="metric-label">Total Items</span>
+                    <strong id="totalProducts">0</strong>
+                </article>
+                <article class="metric-card metric-fresh">
+                    <span class="metric-label">Fresh</span>
+                    <strong id="freshCount">0</strong>
+                </article>
+                <article class="metric-card metric-warning">
+                    <span class="metric-label">Expiring Soon</span>
+                    <strong id="expiringSoonCount">0</strong>
+                </article>
+                <article class="metric-card metric-danger">
+                    <span class="metric-label">Expired</span>
+                    <strong id="expiredCount">0</strong>
+                </article>
+            </section>
+
+            <section class="panel report-actions">
+                <div class="section-heading">
+                    <p class="section-kicker">Export Tools</p>
+                    <h2>Download Reports</h2>
+                </div>
+                <p class="section-copy">Generate a CSV report for inventory audits or a compact summary for quick review.</p>
+                <div class="action-buttons report-buttons">
+                    <button id="exportCsvBtn" class="action-btn donate-btn">Download CSV Report</button>
+                    <button id="refreshReportBtn" class="action-btn recycle-btn">Refresh Report Data</button>
+                </div>
+            </section>
+
+            <section class="content-grid report-grid">
+                <div class="panel">
+                    <div class="section-heading">
+                        <p class="section-kicker">Recent Activity</p>
+                        <h2>Timeline</h2>
+                    </div>
+                    <div id="activityFeed" class="activity-feed"></div>
+                </div>
+
+                <div class="panel">
+                    <div class="section-heading">
+                        <p class="section-kicker">Snapshot</p>
+                        <h2>Inventory Summary</h2>
+                    </div>
+                    <div id="summaryCard" class="summary-card"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

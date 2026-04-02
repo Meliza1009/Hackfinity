@@ -1,68 +1,144 @@
+const API_BASE = '';
+
 class FoodExpiryTracker {
     constructor() {
         this.products = [];
         this.rewardPoints = 0;
+        this.summary = {
+            total: 0,
+            fresh: 0,
+            'expiring-soon': 0,
+            expired: 0,
+            rewardPoints: 0
+        };
+        this.activity = [];
+        this.page = document.body.dataset.page || 'dashboard';
         this.foodBanks = [
-            { id: 1, name: "Community Food Bank", address: "123 Main St" },
-            { id: 2, name: "Hope Food Center", address: "456 Park Ave" },
-            { id: 3, name: "Local Food Pantry", address: "789 Church St" }
+            { id: 1, name: 'Community Food Bank' },
+            { id: 2, name: 'Hope Food Center' },
+            { id: 3, name: 'Local Food Pantry' }
         ];
-        this.initializeQRScanner();
+
         this.initializeEventListeners();
+        this.bootstrap();
+    }
+
+    async bootstrap() {
+        await this.refreshData();
+
+        if (this.page === 'dashboard') {
+            this.initializeQRScanner();
+        }
+
+        if (this.page === 'inventory') {
+            this.renderInventoryPage();
+        }
+
+        if (this.page === 'reports') {
+            this.renderReportsPage();
+        }
+    }
+
+    async refreshData() {
+        const response = await fetch(`${API_BASE}/api/summary`);
+        const payload = await response.json();
+        this.summary = payload.summary || this.summary;
+        this.activity = payload.activity || [];
+        this.rewardPoints = this.summary.rewardPoints || 0;
+
+        const productResponse = await fetch(`${API_BASE}/api/products`);
+        const productPayload = await productResponse.json();
+        this.products = productPayload.products || [];
+
+        this.updateMetrics();
+        this.updateRewardPointsDisplay();
+    }
+
+    initializeEventListeners() {
+        const form = document.getElementById('product-form');
+        if (form) {
+            form.addEventListener('submit', (event) => {
+                event.preventDefault();
+                this.handleManualEntry();
+            });
+        }
+
+        const donateButton = document.getElementById('donate-btn');
+        const returnButton = document.getElementById('return-btn');
+        const recycleButton = document.getElementById('recycle-btn');
+        const foodBankSelect = document.getElementById('foodBankSelect');
+
+        if (foodBankSelect) {
+            foodBankSelect.addEventListener('change', () => this.updateFoodBankLabel());
+        }
+
+        if (donateButton) {
+            donateButton.addEventListener('click', () => this.handleAction('donate'));
+        }
+
+        if (returnButton) {
+            returnButton.addEventListener('click', () => this.handleAction('return'));
+        }
+
+        if (recycleButton) {
+            recycleButton.addEventListener('click', () => this.handleAction('recycle'));
+        }
+
+        const exportButton = document.getElementById('exportCsvBtn');
+        if (exportButton) {
+            exportButton.addEventListener('click', () => {
+                window.location.href = `${API_BASE}/api/reports/export.csv`;
+            });
+        }
+
+        const refreshButton = document.getElementById('refreshReportBtn');
+        if (refreshButton) {
+            refreshButton.addEventListener('click', async () => {
+                await this.refreshData();
+                this.renderReportsPage();
+            });
+        }
     }
 
     initializeQRScanner() {
         const qrReader = document.getElementById('qr-reader');
-        
-        if (!qrReader) {
-            console.error('QR reader element not found');
+        if (!qrReader || typeof Html5QrcodeScanner === 'undefined') {
             return;
         }
 
-        this.html5QrcodeScanner = new Html5QrcodeScanner(
-            "qr-reader",
-            {
-                fps: 10,
-                qrbox: { width: 250, height: 250 },
-                aspectRatio: 1.0,
-                showTorchButtonIfSupported: true,
-                showZoomSliderIfSupported: true,
-                defaultZoomValueIfSupported: 2
-            }
-        );
+        this.html5QrcodeScanner = new Html5QrcodeScanner('qr-reader', {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+            aspectRatio: 1,
+            showTorchButtonIfSupported: true,
+            showZoomSliderIfSupported: true
+        });
 
-        const onScanSuccess = (decodedText, decodedResult) => {
-            console.log('Raw QR Scan Result:', decodedText);
+        const onScanSuccess = (decodedText) => {
             this.handleQRData(decodedText);
         };
 
-        const onScanError = (errorMessage) => {
-            console.warn(`QR scan error: ${errorMessage}`);
-        };
+        const onScanError = () => {};
 
         this.html5QrcodeScanner.render(onScanSuccess, onScanError);
 
-        // Add a restart button
         const restartButton = document.createElement('button');
+        restartButton.type = 'button';
         restartButton.textContent = 'Restart Scanner';
         restartButton.className = 'restart-scanner-btn';
-        restartButton.onclick = () => this.restartScanner();
+        restartButton.addEventListener('click', () => this.restartScanner());
         qrReader.parentElement.appendChild(restartButton);
     }
 
-    handleQRData(data) {
+    async handleQRData(data) {
         const scanResult = document.getElementById('scan-result');
         if (!scanResult) {
-            console.error('Scan result element not found');
             return;
         }
 
-        console.log('Received QR Data:', data);
-
         try {
             let productData;
-            
-            // Try to parse as JSON first
+
             try {
                 const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
                 productData = {
@@ -71,304 +147,352 @@ class FoodExpiryTracker {
                     manufacturingDate: parsedData.manufacturingDate || parsedData.mfgDate || '',
                     expiryDate: parsedData.expiryDate || parsedData.expDate || ''
                 };
-            } catch (parseError) {
-                // If JSON parsing fails, try to parse the text format
-                const lines = data.split('\n');
+            } catch {
+                const lines = String(data).split('\n');
                 productData = {
-                    name: lines[0].split(': ')[1] || '',
-                    manufacturingDate: lines[1].split(': ')[1] || '',
-                    expiryDate: lines[2].split(': ')[1] || '',
-                    batchNumber: lines[3].split(': ')[1] || ''
+                    name: lines[0]?.split(': ')[1] || '',
+                    manufacturingDate: lines[1]?.split(': ')[1] || '',
+                    expiryDate: lines[2]?.split(': ')[1] || '',
+                    batchNumber: lines[3]?.split(': ')[1] || ''
                 };
             }
 
-            console.log('Processed Product Data:', productData);
-
-            // Validate the product data
-            if (this.validateProductData(productData)) {
-                // Add the product directly
-                this.addProduct({
+            const response = await fetch(`${API_BASE}/api/products`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
                     ...productData,
-                    status: this.calculateStatus(new Date(productData.expiryDate))
-                });
+                    source: 'qr'
+                })
+            });
 
-                // Display the scanned result
-                scanResult.innerHTML = `
-                    <div class="scan-result success">
-                        <h3>Product Successfully Added:</h3>
-                        <p>Product Name: ${productData.name}</p>
-                        <p>Manufacturing Date: ${productData.manufacturingDate}</p>
-                        <p>Expiry Date: ${productData.expiryDate}</p>
-                        <p>Batch Number: ${productData.batchNumber}</p>
-                    </div>
-                `;
+            const payload = await response.json();
 
-                // Clear and reinitialize scanner
-                this.restartScanner();
-
-            } else {
-                console.error('Product validation failed');
-                scanResult.innerHTML = `
-                    <div class="scan-result error">
-                        <h3>Invalid Product Data</h3>
-                        <p>Please ensure the QR code contains valid product information.</p>
-                    </div>
-                `;
+            if (!response.ok) {
+                throw new Error(payload.message || 'Unable to add scanned product.');
             }
 
+            this.products = [payload.product, ...this.products];
+            this.summary = payload.summary || this.summary;
+            this.updateMetrics();
+            this.updateRewardPointsDisplay();
+
+            scanResult.innerHTML = `
+                <div class="scan-result success">
+                    <h3>Product Successfully Added</h3>
+                    <p>Product Name: ${payload.product.name}</p>
+                    <p>Manufacturing Date: ${payload.product.manufacturingDate}</p>
+                    <p>Expiry Date: ${payload.product.expiryDate}</p>
+                    <p>Batch Number: ${payload.product.batchNumber}</p>
+                </div>
+            `;
+
+            this.restartScanner();
+            await this.refreshData();
+            this.renderCurrentPage();
         } catch (error) {
-            console.error('Error processing QR data:', error);
             scanResult.innerHTML = `
                 <div class="scan-result error">
                     <h3>Error Scanning Product</h3>
-                    <p>Invalid QR code format. Please try again.</p>
-                    <p>Error: ${error.message}</p>
+                    <p>${error.message}</p>
                 </div>
             `;
         }
     }
 
     restartScanner() {
-        if (this.html5QrcodeScanner) {
-            this.html5QrcodeScanner.clear().then(() => {
-                console.log('Scanner cleared successfully');
-                // Add a slight delay before reinitializing
-                setTimeout(() => {
-                    const qrReader = document.getElementById('qr-reader');
-                    qrReader.innerHTML = ''; // Clear the old scanner UI
-                    this.initializeQRScanner(); // Reinitialize the scanner
-                }, 1000);
-            }).catch((error) => {
-                console.error('Failed to clear scanner:', error);
-            });
+        if (!this.html5QrcodeScanner) {
+            return;
         }
+
+        this.html5QrcodeScanner.clear().then(() => {
+            const qrReader = document.getElementById('qr-reader');
+            if (qrReader) {
+                qrReader.innerHTML = '';
+                this.initializeQRScanner();
+            }
+        }).catch(() => {});
     }
 
-    initializeEventListeners() {
-        document.getElementById('product-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            this.handleManualEntry();
+    async handleManualEntry() {
+        const productData = {
+            name: document.getElementById('productName')?.value.trim(),
+            batchNumber: document.getElementById('productNumber')?.value.trim(),
+            manufacturingDate: document.getElementById('mfgDate')?.value,
+            expiryDate: document.getElementById('expDate')?.value,
+            source: 'manual'
+        };
+
+        if (!productData.name || !productData.batchNumber || !productData.manufacturingDate || !productData.expiryDate) {
+            alert('All fields are required');
+            return;
+        }
+
+        const response = await fetch(`${API_BASE}/api/products`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(productData)
         });
 
-        document.getElementById('donate-btn').addEventListener('click', () => this.handleDonation());
-        document.getElementById('return-btn').addEventListener('click', () => this.handleReturn());
-        document.getElementById('recycle-btn').addEventListener('click', () => this.handleRecycle());
+        const payload = await response.json();
+        if (!response.ok) {
+            alert(payload.message || 'Unable to save product.');
+            return;
+        }
+
+        const form = document.getElementById('product-form');
+        if (form) {
+            form.reset();
+        }
+
+        await this.refreshData();
+        this.renderCurrentPage();
     }
 
-    handleManualEntry() {
-        const productData = {
-            name: document.getElementById('productName').value,
-            batchNumber: document.getElementById('productNumber').value,
-            manufacturingDate: document.getElementById('mfgDate').value,
-            expiryDate: document.getElementById('expDate').value
-        };
-        
-        if (this.validateProductData(productData)) {
-            this.addProduct(productData);
-            document.getElementById('product-form').reset();
+    getSelectedProducts() {
+        const checkboxes = document.querySelectorAll('.product-item input[type="checkbox"]:checked:not(:disabled)');
+        return Array.from(checkboxes)
+            .map((checkbox) => this.products.find((product) => Number(product.id) === Number(checkbox.dataset.id)))
+            .filter(Boolean);
+    }
+
+    async handleAction(action) {
+        const selectedProducts = this.getSelectedProducts();
+        if (selectedProducts.length === 0) {
+            alert('Please select products first');
+            return;
+        }
+
+        if (action === 'donate') {
+            const foodBankSelect = document.getElementById('foodBankSelect');
+            if (!foodBankSelect?.value) {
+                alert('Please select a food bank for donation');
+                return;
+            }
+        }
+
+        const response = await fetch(`${API_BASE}/api/actions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action,
+                productIds: selectedProducts.map((product) => product.id),
+                foodBankId: document.getElementById('foodBankSelect')?.value || ''
+            })
+        });
+
+        const payload = await response.json();
+        if (!response.ok) {
+            alert(payload.message || 'Action failed.');
+            return;
+        }
+
+        if (action === 'donate') {
+            alert(`Donation confirmed for ${payload.removedCount} item(s).`);
+        }
+
+        if (action === 'return') {
+            alert(`Return request placed for ${payload.removedCount} item(s).`);
+        }
+
+        if (action === 'recycle') {
+            alert(`Recycling logged. You earned ${payload.rewardPointsEarned} points.`);
+        }
+
+        this.products = this.products.filter((product) => !selectedProducts.some((selected) => Number(selected.id) === Number(product.id)));
+        this.summary = payload.summary || this.summary;
+        this.activity = payload.activity || this.activity;
+
+        await this.refreshData();
+        this.renderCurrentPage();
+    }
+
+    renderCurrentPage() {
+        if (this.page === 'inventory') {
+            this.renderInventoryPage();
+        }
+
+        if (this.page === 'reports') {
+            this.renderReportsPage();
+        }
+
+        if (this.page === 'dashboard') {
+            this.updateFoodBankLabel();
         }
     }
 
-    validateProductData(productData) {
-        // Check for empty fields
-        if (!productData.name || !productData.batchNumber || 
-            !productData.manufacturingDate || !productData.expiryDate) {
-            alert('All fields are required');
-            return false;
-        }
-
-        // Validate dates
-        const mfgDate = new Date(productData.manufacturingDate);
-        const expDate = new Date(productData.expiryDate);
-        const today = new Date();
-
-        if (mfgDate > today) {
-            alert('Manufacturing date cannot be in the future');
-            return false;
-        }
-
-        if (expDate < mfgDate) {
-            alert('Expiry date must be after manufacturing date');
-            return false;
-        }
-
-        return true;
+    renderInventoryPage() {
+        this.renderProductLists();
+        this.updateFoodBankLabel();
     }
 
-    addProduct(productData) {
-        const product = {
-            ...productData,
-            id: Date.now(),
-            status: this.calculateStatus(new Date(productData.expiryDate))
-        };
-        
-        this.products.push(product);
-        console.log('Products array after adding:', this.products); // Debug log
-        this.updateProductLists();
-        this.checkExpiryAlert(product);
+    renderReportsPage() {
+        this.renderSummaryCard();
+        this.renderActivityFeed();
     }
 
-    calculateStatus(expiryDate) {
-        const today = new Date();
-        const daysUntilExpiry = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
-        
-        if (daysUntilExpiry < 0) return 'expired';
-        if (daysUntilExpiry <= 2) return 'expiring-soon';
-        return 'fresh';
-    }
-
-    checkExpiryAlert(product) {
-        if (product.status === 'expiring-soon') {
-            alert(`Warning: ${product.name} is expiring within 2 days!`);
-        }
-    }
-
-    updateProductLists() {
-        console.log('Updating product lists...');
-        
-        // Get the container elements
+    renderProductLists() {
         const freshList = document.querySelector('#fresh-products .product-list');
         const expiringSoonList = document.querySelector('#expiring-soon .product-list');
         const expiredList = document.querySelector('#expired .product-list');
 
         if (!freshList || !expiringSoonList || !expiredList) {
-            console.error('Product list containers not found. DOM elements:', {
-                freshList,
-                expiringSoonList,
-                expiredList
-            });
             return;
         }
 
-        // Clear existing lists
         freshList.innerHTML = '';
         expiringSoonList.innerHTML = '';
         expiredList.innerHTML = '';
 
-        // Calculate stock levels
-        const stockLevels = this.products.reduce((acc, product) => {
-            acc[product.batchNumber] = (acc[product.batchNumber] || 0) + 1;
-            return acc;
+        const groupedProducts = [...this.products].sort((left, right) => new Date(left.expiryDate) - new Date(right.expiryDate));
+        const stockLevels = groupedProducts.reduce((accumulator, product) => {
+            accumulator[product.batchNumber] = (accumulator[product.batchNumber] || 0) + 1;
+            return accumulator;
         }, {});
 
-        // Sort products by expiry date
-        const sortedProducts = [...this.products].sort((a, b) => 
-            new Date(a.expiryDate) - new Date(b.expiryDate)
-        );
+        const buckets = {
+            fresh: freshList,
+            'expiring-soon': expiringSoonList,
+            expired: expiredList
+        };
 
-        console.log('Sorted products:', sortedProducts); // Debug log
-
-        // Distribute products to appropriate lists
-        sortedProducts.forEach(product => {
-            const li = this.createProductListItem(product, stockLevels[product.batchNumber]);
-            
-            switch(product.status) {
-                case 'fresh':
-                    freshList.appendChild(li);
-                    break;
-                case 'expiring-soon':
-                    expiringSoonList.appendChild(li);
-                    break;
-                case 'expired':
-                    expiredList.appendChild(li);
-                    break;
+        Object.entries(buckets).forEach(([status, list]) => {
+            const productsForStatus = groupedProducts.filter((product) => product.status === status);
+            if (productsForStatus.length === 0) {
+                const emptyState = document.createElement('li');
+                emptyState.className = 'empty-state';
+                emptyState.textContent = `No ${status.replace('-', ' ')} products yet.`;
+                list.appendChild(emptyState);
+                return;
             }
+
+            productsForStatus.forEach((product) => {
+                list.appendChild(this.createProductListItem(product, stockLevels[product.batchNumber]));
+            });
         });
+
+        this.updateMetrics();
     }
 
     createProductListItem(product, stockLevel) {
         const li = document.createElement('li');
         li.className = `product-item ${product.status}`;
-        
-        const mfgDate = new Date(product.manufacturingDate).toLocaleDateString();
-        const expDate = new Date(product.expiryDate).toLocaleDateString();
+
         const daysUntilExpiry = Math.ceil((new Date(product.expiryDate) - new Date()) / (1000 * 60 * 60 * 24));
-        
         const isExpired = product.status === 'expired';
-        
+
         li.innerHTML = `
             <div class="product-info">
-                <input type="checkbox" data-id="${product.id}" 
-                       ${isExpired ? 'disabled' : ''}>
+                <input type="checkbox" data-id="${product.id}" ${isExpired ? 'disabled' : ''}>
                 <div class="product-details">
                     <h3>${product.name}</h3>
                     <div class="details-grid">
                         <span>Batch: ${product.batchNumber}</span>
                         <span>Stock Level: ${stockLevel} items</span>
-                        <span>Mfg Date: ${mfgDate}</span>
-                        <span>Exp Date: ${expDate}</span>
-                        <span class="expiry-days ${product.status}">
-                            ${daysUntilExpiry > 0 ? 
-                                `${daysUntilExpiry} days until expiry` : 
-                                '<i class="expired-icon">⚠️</i>Expired'}
-                        </span>
-                        ${isExpired ? 
-                            '<span class="expired-warning">This item cannot be donated as it has expired</span>' 
-                            : ''}
+                        <span>Mfg Date: ${new Date(product.manufacturingDate).toLocaleDateString()}</span>
+                        <span>Exp Date: ${new Date(product.expiryDate).toLocaleDateString()}</span>
+                        <span class="expiry-days ${product.status}">${daysUntilExpiry > 0 ? `${daysUntilExpiry} days until expiry` : 'Expired'}</span>
+                        ${isExpired ? '<span class="expired-warning">This item cannot be donated as it has expired</span>' : ''}
                     </div>
                 </div>
             </div>
         `;
+
         return li;
     }
 
-    getSelectedProducts() {
-        const checkboxes = document.querySelectorAll('.product-item input[type="checkbox"]:checked:not(:disabled)');
-        return Array.from(checkboxes).map(checkbox => {
-            return this.products.find(p => p.id === parseInt(checkbox.dataset.id));
-        });
+    renderSummaryCard() {
+        const summaryCard = document.getElementById('summaryCard');
+        if (!summaryCard) {
+            return;
+        }
+
+        summaryCard.innerHTML = `
+            <div class="summary-grid">
+                <div class="summary-stat">
+                    <span>Total Items</span>
+                    <strong>${this.summary.total}</strong>
+                </div>
+                <div class="summary-stat">
+                    <span>Fresh</span>
+                    <strong>${this.summary.fresh}</strong>
+                </div>
+                <div class="summary-stat">
+                    <span>Expiring Soon</span>
+                    <strong>${this.summary['expiring-soon']}</strong>
+                </div>
+                <div class="summary-stat">
+                    <span>Expired</span>
+                    <strong>${this.summary.expired}</strong>
+                </div>
+                <div class="summary-stat">
+                    <span>Reward Points</span>
+                    <strong>${this.rewardPoints}</strong>
+                </div>
+                <div class="summary-stat">
+                    <span>Inventory Health</span>
+                    <strong>${this.summary.total > 0 ? `${Math.round((this.summary.fresh / this.summary.total) * 100)}%` : '0%'}</strong>
+                </div>
+            </div>
+        `;
     }
 
-    handleDonation() {
-        const selectedProducts = this.getSelectedProducts();
-        if (selectedProducts.length === 0) {
-            alert('Please select products to donate');
+    renderActivityFeed() {
+        const activityFeed = document.getElementById('activityFeed');
+        if (!activityFeed) {
             return;
         }
 
-        // Check if any selected product is expired
-        const hasExpiredItems = selectedProducts.some(product => product.status === 'expired');
-        if (hasExpiredItems) {
-            alert('Cannot donate expired items. Please remove expired items from selection.');
+        if (this.activity.length === 0) {
+            activityFeed.innerHTML = '<div class="empty-state">No activity yet. Add items or process an action to create a report.</div>';
             return;
         }
 
-        const foodBankSelect = document.getElementById('foodBankSelect');
-        if (!foodBankSelect.value) {
-            alert('Please select a food bank for donation');
-            return;
-        }
-
-        const selectedFoodBank = this.foodBanks.find(fb => fb.id === parseInt(foodBankSelect.value));
-        alert(`Donation confirmed! The items will be sent to ${selectedFoodBank.name}`);
-        this.removeProducts(selectedProducts);
+        activityFeed.innerHTML = this.activity
+            .slice()
+            .reverse()
+            .map((entry) => `
+                <article class="activity-item">
+                    <strong>${entry.type.replace(/-/g, ' ').toUpperCase()}</strong>
+                    <span>${entry.detail}</span>
+                    <span>${new Date(entry.createdAt).toLocaleString()}</span>
+                </article>
+            `)
+            .join('');
     }
 
-    handleReturn() {
-        const selectedProducts = this.getSelectedProducts();
-        if (selectedProducts.length === 0) {
-            alert('Please select products to return');
+    updateFoodBankLabel() {
+        const select = document.getElementById('foodBankSelect');
+        const label = document.getElementById('selectedFoodBankLabel');
+        if (!select || !label) {
             return;
         }
-        
-        alert('Return request placed. The seller will process your return.');
-        this.removeProducts(selectedProducts);
+
+        const selected = this.foodBanks.find((foodBank) => String(foodBank.id) === String(select.value));
+        label.textContent = selected ? selected.name : 'None';
     }
 
-    handleRecycle() {
-        const selectedProducts = this.getSelectedProducts();
-        if (selectedProducts.length === 0) {
-            alert('Please select products to recycle');
-            return;
+    updateMetrics() {
+        const totalProducts = document.getElementById('totalProducts');
+        const freshCount = document.getElementById('freshCount');
+        const expiringSoonCount = document.getElementById('expiringSoonCount');
+        const expiredCount = document.getElementById('expiredCount');
+
+        if (totalProducts) {
+            totalProducts.textContent = this.summary.total;
         }
-        
-        // Award points for recycling (10 points per item)
-        const pointsEarned = selectedProducts.length * 10;
-        this.rewardPoints += pointsEarned;
-        
-        alert(`Products marked for recycling. You earned ${pointsEarned} points! Total points: ${this.rewardPoints}`);
-        this.removeProducts(selectedProducts);
-        this.updateRewardPointsDisplay();
+
+        if (freshCount) {
+            freshCount.textContent = this.summary.fresh;
+        }
+
+        if (expiringSoonCount) {
+            expiringSoonCount.textContent = this.summary['expiring-soon'];
+        }
+
+        if (expiredCount) {
+            expiredCount.textContent = this.summary.expired;
+        }
     }
 
     updateRewardPointsDisplay() {
@@ -377,15 +501,8 @@ class FoodExpiryTracker {
             pointsDisplay.textContent = this.rewardPoints;
         }
     }
-
-    removeProducts(productsToRemove) {
-        const productIds = productsToRemove.map(p => p.id);
-        this.products = this.products.filter(p => !productIds.includes(p.id));
-        this.updateProductLists();
-    }
 }
 
-// Initialize the app when the DOM is fully loaded
 document.addEventListener('DOMContentLoaded', () => {
     new FoodExpiryTracker();
 });

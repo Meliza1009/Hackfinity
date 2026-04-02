@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food Expiry Tracker | Inventory</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="inventory">
+    <div class="page-shell">
+        <main class="container app-layout">
+            <header class="topbar">
+                <div>
+                    <span class="eyebrow">Inventory Control</span>
+                    <h1 class="main-title">Manage Product Stock</h1>
+                    <p class="subtitle">Add products manually, review expiry groups, and keep the inventory list clean and actionable.</p>
+                </div>
+                <nav class="page-nav">
+                    <a class="nav-link" href="index.html">Dashboard</a>
+                    <a class="nav-link active" href="inventory.html">Inventory</a>
+                    <a class="nav-link" href="reports.html">Reports</a>
+                </nav>
+            </header>
+
+            <section class="panel form-container">
+                <div class="section-heading">
+                    <p class="section-kicker">Manual Entry</p>
+                    <h2>Add Product</h2>
+                </div>
+                <p class="section-copy">Use the form when a QR code is unavailable or when entering stock manually.</p>
+                <form id="product-form">
+                    <div class="form-group">
+                        <label for="productName">Product Name</label>
+                        <input type="text" id="productName" placeholder="e.g. Fresh Milk" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="productNumber">Batch Number</label>
+                        <input type="text" id="productNumber" placeholder="e.g. B-2048" required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="mfgDate">Manufacture Date</label>
+                            <input type="date" id="mfgDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="expDate">Expiry Date</label>
+                            <input type="date" id="expDate" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="save-btn">Save Product</button>
+                </form>
+            </section>
+
+            <section class="panel products-container">
+                <div class="section-heading">
+                    <p class="section-kicker">Current Stock</p>
+                    <h2>Grouped Product List</h2>
+                </div>
+                <p class="section-copy">Products are organized by freshness so the most urgent items are easy to spot.</p>
+                <div class="hero-metrics inventory-stats">
+                    <article class="metric-card metric-total">
+                        <span class="metric-label">Total Items</span>
+                        <strong id="totalProducts">0</strong>
+                    </article>
+                    <article class="metric-card metric-fresh">
+                        <span class="metric-label">Fresh</span>
+                        <strong id="freshCount">0</strong>
+                    </article>
+                    <article class="metric-card metric-warning">
+                        <span class="metric-label">Expiring Soon</span>
+                        <strong id="expiringSoonCount">0</strong>
+                    </article>
+                    <article class="metric-card metric-danger">
+                        <span class="metric-label">Expired</span>
+                        <strong id="expiredCount">0</strong>
+                    </article>
+                </div>
+                <div class="product-categories">
+                    <div id="fresh-products" class="category-card">
+                        <div class="category-title fresh-title">
+                            <h3>Fresh Products</h3>
+                            <span>Safe for storage</span>
+                        </div>
+                        <ul class="product-list"></ul>
+                    </div>
+                    <div id="expiring-soon" class="category-card">
+                        <div class="category-title warning-title">
+                            <h3>Expiring Soon</h3>
+                            <span>Needs attention</span>
+                        </div>
+                        <ul class="product-list"></ul>
+                    </div>
+                    <div id="expired" class="category-card">
+                        <div class="category-title danger-title">
+                            <h3>Expired Products</h3>
+                            <span>Remove from circulation</span>
+                        </div>
+                        <ul class="product-list"></ul>
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel actions-panel">
+                <div class="section-heading">
+                    <p class="section-kicker">Bulk Action</p>
+                    <h2>Process Selected Items</h2>
+                </div>
+                <p class="section-copy">Pick products from the list, then route them to donation, return, or recycling.</p>
+                <div class="action-buttons">
+                    <select id="foodBankSelect" class="food-bank-select">
+                        <option value="">Select Food Bank</option>
+                        <option value="1">Community Food Bank</option>
+                        <option value="2">Hope Food Center</option>
+                        <option value="3">Local Food Pantry</option>
+                    </select>
+                    <button id="donate-btn" class="action-btn donate-btn">Donate Selected Items</button>
+                    <button id="return-btn" class="action-btn return-btn">Return Selected Items</button>
+                    <button id="recycle-btn" class="action-btn recycle-btn">Recycle Selected Items</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
